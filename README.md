@@ -4,6 +4,6 @@
 ## 輸入議題與目標字數，自動對齊、接軌、升華 ✦
 
 
-![範例1](example1.jpg)
+![測試圖片](./exampl1.jpg)
 
-![範例2](example2.jpg)
+![測試圖片](./exampl2.jpg)
