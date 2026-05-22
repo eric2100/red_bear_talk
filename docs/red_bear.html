@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>紅熊博學多問，問不倒產生器</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: #f5f4f0;
+    color: #1a1a18;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 680px; width: 100%; }
+  .title { font-size: 24px; font-weight: 500; color: #1a1a18; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 14px; color: #888780; margin-bottom: 1.75rem; }
+  .row { display: flex; gap: 12px; margin-bottom: 1rem; align-items: flex-end; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; color: #5f5e5a; }
+  .field input {
+    height: 36px;
+    border: 0.5px solid #c8c7bd;
+    border-radius: 8px;
+    padding: 0 0.75rem;
+    font-size: 15px;
+    background: #fff;
+    color: #1a1a18;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: #888780; box-shadow: 0 0 0 2px rgba(136,135,128,0.15); }
+  .field.topic input { width: 260px; }
+  .field.count input { width: 100px; }
+  button.gen {
+    height: 36px; padding: 0 1.25rem;
+    background: transparent;
+    border: 0.5px solid #b4b2a9;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1a1a18;
+    cursor: pointer;
+    transition: background 0.12s, transform 0.1s;
+  }
+  button.gen:hover { background: #e8e7e3; }
+  button.gen:active { transform: scale(0.98); }
+  .output-box {
+    background: #fff;
+    border: 0.5px solid #d3d1c7;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    font-size: 15px;
+    line-height: 1.9;
+    color: #1a1a18;
+    min-height: 140px;
+    margin-top: 1.5rem;
+    white-space: pre-wrap;
+  }
+  .meta {
+    font-size: 12px;
+    color: #888780;
+    margin-top: 0.75rem;
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px;
+    border-radius: 6px; font-weight: 500;
+  }
+  .badge-info { background: #e6f1fb; color: #185fa5; }
+  .badge-success { background: #eaf3de; color: #3b6d11; }
+  .badge-warn { background: #faeeda; color: #854f0b; }
+  button.copy-btn {
+    height: 28px; padding: 0 0.75rem;
+    background: transparent;
+    border: 0.5px solid #b4b2a9;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #5f5e5a;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  button.copy-btn:hover { background: #e8e7e3; }
+  .placeholder { color: #b4b2a9; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="title">紅熊博學多問，問不倒產生器</h1>
+  <p class="subtitle">輸入議題與目標字數，自動對齊、接軌、升華 ✦</p>
+
+  <div class="row">
+    <div class="field topic">
+      <label for="topic">議題</label>
+      <input type="text" id="topic" placeholder="例：交通改善、教育政策…" />
+    </div>
+    <div class="field count">
+      <label for="wordcount">字數</label>
+      <input type="number" id="wordcount" value="150" min="50" max="600" step="10" />
+    </div>
+    <button class="gen" onclick="generate()">生成廢話 ↗</button>
+  </div>
+
+  <div id="output" class="output-box">
+    <span class="placeholder">請輸入議題並點擊「生成廢話」…</span>
+  </div>
+  <div class="meta" id="meta">
+    <span id="wc-badge"></span>
+    <button class="copy-btn" onclick="copyText()">⧉ 複製</button>
+  </div>
+</div>
+
+<script>
+const openings = [
+  "其實講到{topic}這件事情，",
+  "說到{topic}，很多人第一個反應都是，",
+  "關於{topic}，我覺得大家都知道，",
+  "我們今天談到{topic}，",
+  "其實{topic}這個問題，"
+];
+const align_phrases = [
+  "我們要做的第一件事，就是把{topic}跟整體城市發展方向做一個對齊，",
+  "我認為{topic}的核心，是要跟我們整體施政方向做完整的對齊，",
+  "面對{topic}，我們必須先把各局處的資源做好對齊跟整合，",
+  "{topic}本身牽涉很廣，我們需要橫向對齊不同單位的目標，",
+  "要解決{topic}，第一步就是把相關政策對齊，找到共同的方向，"
+];
+const mid_phrases = [
+  "你不可能今天看到問題就直接去解決它，一定要先把先決問題處理好，不然後面衍生出來的問題反而更多。",
+  "這不是單一部門可以解決的，我們需要跨局處、跨單位的協調，這樣才能讓資源發揮最大的效益。",
+  "解決事情有它的順序，我們必須先建立好基礎，才能往上疊加，否則根本站不穩。",
+  "其實很多市民對這件事情是有感的，他們要的不是口號，而是看到實際的改變。",
+  "我覺得這一塊如果沒有做好，後面不管再怎麼努力，都會事倍功半。"
+];
+const city_phrases = [
+  "臺北市作為臺灣的首都，我們今天所呈現的，就是整個臺灣在國際社會上的形象。",
+  "我們臺北市畢竟是臺灣的門面，我們做的每一件事，都代表著這座城市的高度。",
+  "臺北作為首都，我們有責任在{topic}這個議題上，樹立一個可以給其他城市參考的標竿。",
+  "一個偉大的城市，不是靠口號堆砌出來的，而是靠一件一件事情，踏踏實實做出來的。",
+  "我們這座城市的底蘊在那裡，我們只需要把它發掘出來，對外展現給世界看。"
+];
+const intl_phrases = [
+  "這也是為什麼我一直強調，{topic}不只是地方議題，我們要有接軌國際的高度與視野。",
+  "我們不能只看到臺灣，我們要放眼國際，在{topic}上找到可以對話的國際標準。",
+  "接軌國際，這四個字說起來簡單，但背後需要我們在{topic}上做出實質的改變跟投入。",
+  "我認為在{topic}方面，我們完全有條件和國際一流城市對話、接軌，只是我們還沒有把這個潛力完整發揮。",
+  "國際城市都在進步，我們在{topic}這塊如果跟不上腳步，就會被邊緣化。"
+];
+const closings = [
+  "所以這一環扣著一環，我們一定要有系統地去推動，才能讓市民真正有感。",
+  "我會持續跟每一位議員討論，不管是政策面還是執行面，都要讓{topic}真正落地。",
+  "這也是我們對這座城市的承諾，我們要一步一步，把{topic}做到讓市民放心、讓國際看見。",
+  "路是人走出來的，{topic}這條路，我們一起走，走出臺北的高度，走向世界。",
+  "我相信只要方向對了，步伐穩了，{topic}的成果一定會讓大家看見的。"
+];
+
+function pick(arr, topic) {
+  return arr[Math.floor(Math.random() * arr.length)].replace(/{topic}/g, topic);
+}
+
+function generate() {
+  const topic = document.getElementById('topic').value.trim() || '城市發展';
+  const target = parseInt(document.getElementById('wordcount').value) || 150;
+  const out = document.getElementById('output');
+
+  let parts = [
+    pick(openings, topic),
+    pick(align_phrases, topic),
+    pick(mid_phrases, topic),
+    pick(city_phrases, topic),
+    pick(intl_phrases, topic),
+    pick(closings, topic)
+  ];
+
+  let text = parts.join('');
+  while (text.length < target) {
+    const extras = [
+      `我覺得${topic}這個問題，大家都應該有更深的認識，`,
+      `當然要推動${topic}，絕對不是一蹴可幾的，`,
+      `我們要讓市民對${topic}有感，就要從根本做起，`,
+      `解決${topic}的問題，需要跨部門的合作與對話，`,
+    ];
+    text += extras[Math.floor(Math.random() * extras.length)];
+  }
+  if (text.length > target + 60) {
+    text = text.slice(0, target);
+    const last = Math.max(text.lastIndexOf('，'), text.lastIndexOf('。'), text.lastIndexOf('！'));
+    if (last > target - 60) text = text.slice(0, last + 1);
+  }
+  if (!text.endsWith('。') && !text.endsWith('！')) text += '。';
+
+  out.textContent = text;
+  const meta = document.getElementById('meta');
+  meta.style.display = 'flex';
+  document.getElementById('wc-badge').innerHTML =
+    `<span class="badge badge-info">共 ${text.length} 字</span>` +
+    `<span class="badge badge-success">已對齊</span>` +
+    `<span class="badge badge-warn">接軌國際</span>`;
+}
+
+function copyText() {
+  const t = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(t).catch(() => {});
+}
+</script>
+</body>
+</html>
